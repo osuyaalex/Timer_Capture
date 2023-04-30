@@ -96,6 +96,39 @@ class _HomeState extends State<Home> {
       return;
     }
   }
+  void _requestCameraPermission() async {
+    var status = await Permission.camera.status;
+    if (status.isGranted) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          content: Text('All good!!'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else if (status.isDenied) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text('Camera permission not granted'),
+          content: Text('Please exit and restart app.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else if (status.isPermanentlyDenied) {
+      return;
+    }
+  }
 
   Future<String?> _uploadItemImageToStorage(XFile image) async {
     if (image != null) {
@@ -228,20 +261,27 @@ class _HomeState extends State<Home> {
         _battery.onBatteryStateChanged.listen(_updateBatteryState);
 
     // Get the first available camera
-    availableCameras().then((value){
-      setState(() {
-        _cameras = value;
-        _selectedCamera = _cameras[0];
-      });
-      // Initialize the camera controller with the first available camera
-      _controller = CameraController(
-        _selectedCamera,
-        ResolutionPreset.high,
-      );
+    Permission.camera.request().then((value){
+      if(value == PermissionStatus.granted){
+        availableCameras().then((value){
+          setState(() {
+            _cameras = value;
+            _selectedCamera = _cameras[0];
+          });
+          // Initialize the camera controller with the first available camera
+          _controller = CameraController(
+            _selectedCamera,
+            ResolutionPreset.high,
+          );
 
-      // Initialize the camera controller
-      _initializeControllerFuture = _controller.initialize();
+          // Initialize the camera controller
+          _initializeControllerFuture = _controller.initialize();
+        });
+      }else{
+        return;
+      }
     });
+
   }
 
   @override
@@ -415,7 +455,17 @@ class _HomeState extends State<Home> {
            const SizedBox(
              height: 10,
            ),
-           Text(_formattedDate),
+           Row(
+             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+             children: [
+               Text(_formattedDate),
+              TextButton(onPressed: (){
+                 _requestCameraPermission();
+
+               }, child: Text('Facing an issue? See here!!!')
+               )
+             ],
+           ),
            const SizedBox(
              height: 10,
            ),
